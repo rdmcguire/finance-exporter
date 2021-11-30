@@ -1,2 +1,2 @@
 # finance-exporter
-Prometheus Exporter for Google Finance Data
+Prometheus Exporter for Yahoo Finance Data

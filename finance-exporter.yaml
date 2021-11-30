@@ -1,0 +1,47 @@
+---
+port: 8000
+address: 0.0.0.0
+interval: 300
+metric_prefix: finance
+metrics:
+  current_price:
+    item: regularMarketPrice
+    type: Gauge
+    help: Current Market Price of Asset
+  open_price:
+    item: regularMarketOpen
+    type: Gauge
+    help: Day Open Price
+  day_high:
+    item: regularMarketDayHigh
+    type: Gauge
+    help: Day High Price
+  day_low:
+    item: regularMarketDayLow
+    type: Gauge
+    help: Day Low Price
+  5w2k_high:
+    item: fiftyTwoWeekHigh
+    type: Gauge
+    help: Fifty-Two Week High
+  5w2k_low:
+    item: fiftyTwoWeekLow
+    type: Gauge
+    help: Fifty-Two Week Low
+  volume:
+    item: regularMarketVolume
+    type: Gauge
+    help: Current Market Volume
+  beta:
+    item: beta
+    type: Gauge
+    help: Beta
+labels:
+  ticker: symbol
+  type: quoteType
+  name: shortName
+  exchange: exchange
+tickers:
+  - VIRS
+  - FZROX
+  - MRNA
