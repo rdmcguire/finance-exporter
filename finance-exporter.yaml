@@ -3,6 +3,14 @@ port: 8000
 address: 0.0.0.0
 interval: 300
 metric_prefix: finance
+
+tickers:
+  - VIRS
+  - FZROX
+  - MRNA
+  - JWN
+  - ABT
+
 metrics:
   current_price:
     item: regularMarketPrice
@@ -12,6 +20,10 @@ metrics:
     item: regularMarketOpen
     type: Gauge
     help: Day Open Price
+  previous_close:
+    item: regularMarketPreviousClose
+    type: Gauge
+    help: Previous Closing Price
   day_high:
     item: regularMarketDayHigh
     type: Gauge
@@ -20,11 +32,11 @@ metrics:
     item: regularMarketDayLow
     type: Gauge
     help: Day Low Price
-  5w2k_high:
+  52wk_high:
     item: fiftyTwoWeekHigh
     type: Gauge
     help: Fifty-Two Week High
-  5w2k_low:
+  52wk_low:
     item: fiftyTwoWeekLow
     type: Gauge
     help: Fifty-Two Week Low
@@ -36,12 +48,9 @@ metrics:
     item: beta
     type: Gauge
     help: Beta
+
 labels:
   ticker: symbol
   type: quoteType
   name: shortName
   exchange: exchange
-tickers:
-  - VIRS
-  - FZROX
-  - MRNA
