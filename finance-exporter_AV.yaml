@@ -1,57 +1,52 @@
 ---
 port: 8000
 address: 0.0.0.0
-interval: 300
-plugin: yfinance
+interval: 60
+plugin: alphavantage
+api_key: TJ5FC75C47UEC74L
 metric_prefix: finance
 
 tickers:
-  - FZROX
-  - IBM
-  - AMD
+  - F
   - INTC
   - BAC
-  - F
   - MU
-  - ^IXIC
-  - ^SPX
-  - ^DJI
 
 metrics:
   current_price:
-    item: regularMarketPrice
+    item: price
     type: Gauge
     help: Current Market Price of Asset
   open_price:
-    item: regularMarketOpen
+    item: open
     type: Gauge
     help: Day Open Price
   previous_close:
-    item: regularMarketPreviousClose
+    item: 'previous close'
     type: Gauge
     help: Previous Closing Price
   day_high:
-    item: regularMarketDayHigh
+    item: high
     type: Gauge
     help: Day High Price
   day_low:
-    item: regularMarketDayLow
+    item: low
     type: Gauge
     help: Day Low Price
   52wk_high:
-    item: fiftyTwoWeekHigh
+    item: '52WeekHigh'
     type: Gauge
     help: Fifty-Two Week High
   52wk_low:
-    item: fiftyTwoWeekLow
+    item: '52WeekLow'
     type: Gauge
     help: Fifty-Two Week Low
   target_median_price:
-    item: targetMedianPrice
+    item: AnalystTargetPrice
     type: Gauge
     help: Target Price (Median)
   volume:
-    item: regularMarketVolume
+    item: volume
     type: Gauge
     help: Current Market Volume
   avg_volume:
@@ -67,11 +62,11 @@ metrics:
     type: Gauge
     help: Percent of Shared Held by Insiders
   pe_forward:
-    item: forwardPE
+    item: ForwardPE
     type: Gauge
     help: Forward Price-to-Earnings Ratio
   pe_trailing:
-    item: trailingPE
+    item: TrailingPE
     type: Gauge
     help: Trailing Price-to-Earnings Ratio
   shorts:
@@ -79,13 +74,13 @@ metrics:
     type: Gauge
     help: Number of shares short
   beta:
-    item: beta
+    item: Beta
     type: Gauge
     help: Beta
 
 labels:
-  ticker: symbol
-  type: quoteType
-  name: shortName
-  exchange: exchange
+  ticker: Symbol
+  type: AssetType
+  name: Name
+  exchange: Exchange
   recommendation: recommendationKey

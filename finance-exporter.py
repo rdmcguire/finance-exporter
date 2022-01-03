@@ -2,9 +2,11 @@
 import argparse
 import time
 from datetime import datetime
+import sys
 import yaml
 import yfinance as yf
 from prometheus_client import start_http_server, Counter, Gauge, Summary, Histogram
+from includes.alphavantage import AlphaVantage
 
 class finance:
 
@@ -19,6 +21,13 @@ class finance:
         self.config['interval'] = next(v for v in [ args.interval, self.config.get('interval') ] if v is not None)
         self.labels             = list(self.config['labels'].keys())
         self.metrics            = list(self.config['metrics'].keys())
+        # Setup plugin. Default plugin is yfinance
+        self.plugin             = next(v for v in [ self.config.get('plugin'), 'yfinance' ] if v is not None)
+        if self.plugin == 'alphavantage' and self.config.get('api_key') is None:
+            self.print_log('Must provide API Key for AlphaVantage to use plugin')
+            sys.exit(1)
+        elif self.plugin == 'alphavantage':
+            self.av = AlphaVantage(self.config.get('api_key'))
         # Prometheus Metrics
         self.prom_metrics               = dict()
         self.prom_metrics['updates']    = Counter(f"{self.config['metric_prefix']}_updates", 'Number of ticker updates', self.labels)
@@ -46,13 +55,20 @@ class finance:
             self.print_log(f"Starting HTTP Server on {self.config['address']}:{self.config['port']}")
         start_http_server(int(self.config['port']), addr=self.config['address'])
 
+    def fetch_data(self, ticker):
+        if self.plugin == 'yfinance':
+            return yf.Ticker(ticker).info
+        elif self.plugin == 'alphavantage':
+            self.av.ticker(ticker)
+            return self.av.get_all()
+
     def update(self):
         for ticker in self.config['tickers']:
             if self.verbose:
                 self.print_log(f'Updating ticker {ticker}')
             start_time = time.time()
             try:
-                quote = yf.Ticker(ticker).info
+                quote = self.fetch_data(ticker)
             except Exception as e:
                 print(f'Error fetching {ticker}: {e}')
                 continue
