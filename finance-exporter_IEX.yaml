@@ -1,5 +1,5 @@
 ---
-port: 8000
+port: 8001
 address: 0.0.0.0
 interval: 60
 plugin: iexcloud
@@ -14,69 +14,41 @@ tickers:
 
 metrics:
   current_price:
-    item: price
+    item: latestPrice
     type: Gauge
     help: Current Market Price of Asset
-  open_price:
-    item: open
+  change:
+    item: changePercent
     type: Gauge
-    help: Day Open Price
+    help: P/C Since Open
   previous_close:
-    item: 'previous close'
+    item: previousClose
     type: Gauge
     help: Previous Closing Price
-  day_high:
-    item: high
-    type: Gauge
-    help: Day High Price
-  day_low:
-    item: low
-    type: Gauge
-    help: Day Low Price
   52wk_high:
-    item: '52WeekHigh'
+    item: week52High
     type: Gauge
     help: Fifty-Two Week High
   52wk_low:
-    item: '52WeekLow'
+    item: week52Low
     type: Gauge
     help: Fifty-Two Week Low
-  target_median_price:
-    item: AnalystTargetPrice
-    type: Gauge
-    help: Target Price (Median)
   volume:
-    item: volume
+    item: iexVolume
     type: Gauge
     help: Current Market Volume
+  previous_volume:
+    item: previousVolume
+    type: Gauge
+    help: Previous Volume
   avg_volume:
-    item: averageVolume
+    item: avgTotalVolume
     type: Gauge
     help: Average Volume
-  avg_10day_volume:
-    item: averageDailyVolume10Day
+  pe_ratio:
+    item: peRatio
     type: Gauge
-    help: Average Daily Volume (10 Day)
-  held_insiders_percent:
-    item: heldPercentInsiders
-    type: Gauge
-    help: Percent of Shared Held by Insiders
-  pe_forward:
-    item: ForwardPE
-    type: Gauge
-    help: Forward Price-to-Earnings Ratio
-  pe_trailing:
-    item: TrailingPE
-    type: Gauge
-    help: Trailing Price-to-Earnings Ratio
-  shorts:
-    item: sharesShort
-    type: Gauge
-    help: Number of shares short
-  beta:
-    item: Beta
-    type: Gauge
-    help: Beta
+    help: Price-to-Earnings Ratio
 
 labels:
   ticker: Symbol

@@ -8,6 +8,8 @@ import yfinance as yf
 from prometheus_client import start_http_server, Counter, Gauge, Summary, Histogram
 from includes.alphavantage import AlphaVantage
 from iexfinance.stocks import Stock
+# Debug
+from pprint import pprint
 
 class finance:
 
@@ -67,7 +69,8 @@ class finance:
             self.av.ticker(ticker)
             return self.av.get_all()
         elif self.plugin == 'iexcloud':
-            quote = Stock(ticker, output_format='json', token=self.config.get('api_key')).get_quote()
+            stock = Stock(ticker, output_format='json', token=self.config.get('api_key'))
+            quote = stock.get_quote()
             return quote
 
     def update(self):
@@ -78,7 +81,7 @@ class finance:
             try:
                 quote = self.fetch_data(ticker)
                 if self.debug:
-                    print(quote)
+                    pprint(quote)
             except Exception as e:
                 print(f'Error fetching {ticker}: {e}')
                 continue
