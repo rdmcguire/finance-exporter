@@ -17,7 +17,7 @@ class finance:
         # Prepare the config
         self.config = dict()
         # This is hard-coded, see finance.update() quote_info declaration
-        self.default_labels = ['plugin', 'source', 'ticker']
+        self.default_labels = list(['plugin', 'source', 'ticker'])
         self.load_config(args.config)
         # Set up -- prefer command line arg to yaml arg
         self.verbose            = args.verbose
@@ -35,8 +35,7 @@ class finance:
         # Prometheus Metrics
         self.prom_metrics               = dict()
         if self.verbose:
-            self.print_log('Preparing default metrics with labels:')
-            pprint(self.default_labels)
+            self.print_log(f'Preparing default metrics with labels: {self.default_labels}')
         self.prom_metrics['updates']    = Counter(f"{self.config['metric_prefix']}_updates", 'Number of ticker updates', self.default_labels)
         self.prom_metrics['quote_time'] = Gauge(f"{self.config['metric_prefix']}_quote_time", 'Time spent retrieving quote', self.default_labels)
         # Initialized Configured Metrics
@@ -87,8 +86,7 @@ class finance:
         for name, metric in self.metrics.items():
             metric_labels = self.labels[metric['source']]
             if self.verbose:
-                self.print_log(f"Preparing metric {name}({metric['type']}) from {metric['source']} with labels:")
-                pprint(metric_labels)
+                self.print_log(f"Preparing metric {name}({metric['type']}) from {metric['source']} with labels: {metric_labels}")
             if metric['type'] == 'Counter':
                 self.prom_metrics[name] = Counter(f"{self.config['metric_prefix']}_{name}", metric['help'], metric_labels)
             elif metric['type'] == 'Gauge':
@@ -128,11 +126,11 @@ class finance:
                 print(f'Error fetching {ticker}: {e}')
                 continue
             duration = time.time() - start_time
-            default_labels = {
+            default_labels = dict({
                 'source': source['name'],
                 'plugin': source['plugin'],
                 'ticker': ticker,
-            }
+            })
             # Update label values
             quote_info = default_labels.copy()
             if source.get('labels') is not None:
@@ -140,13 +138,12 @@ class finance:
                     quote_info[label] = quote.get(field)
             # Update Manual Metrics
             if self.debug:
-                self.print_log('Preparing to load manual metrics with labels:')
-                pprint(default_labels)
-            self.prom_metrics['updates'].labels(default_labels).inc()
-            self.prom_metrics['quote_time'].labels(default_labels).set(duration)
+                self.print_log(f'Preparing to load manual metrics with labels: {default_labels}')
+            self.prom_metrics['updates'].labels(**default_labels).inc()
+            #self.prom_metrics['updates'].labels(default_labels).inc()
+            self.prom_metrics['quote_time'].labels(**default_labels).set(duration)
             if self.debug:
-                self.print_log('Preparing to load configured metrics with labels:')
-                pprint(quote_info)
+                self.print_log(f'Preparing to load configured metrics with labels: {quote_info}')
             # Update Configured Metrics
             for name, metric in self.metrics.items():
                 if metric['source'] != source['name']:

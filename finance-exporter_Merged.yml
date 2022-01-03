@@ -9,8 +9,43 @@ tickers:
   - INTC
   - BAC
   - MU
+  - CDAK
 
 sources:
+  - name: iexcloud
+    interval: 60
+    plugin: iexcloud
+    api_key: pk_10a8739d7ce0464aa92880ee313df956
+    metrics:
+      current_price:
+        item: latestPrice
+        type: Gauge
+        help: Current Market Price of Asset
+      change:
+        item: changePercent
+        type: Gauge
+        help: P/C Since Open
+      previous_close:
+        item: previousClose
+        type: Gauge
+        help: Previous Closing Price
+      volume:
+        item: iexVolume
+        type: Gauge
+        help: Current Market Volume
+      previous_volume:
+        item: previousVolume
+        type: Gauge
+        help: Previous Volume
+      avg_volume:
+        item: avgTotalVolume
+        type: Gauge
+        help: Average Volume
+      pe_ratio:
+        item: peRatio
+        type: Gauge
+        help: Price-to-Earnings Ratio
+
   - name: yahoo
     interval: 300
     plugin: yfinance
@@ -85,37 +120,3 @@ sources:
       name: shortName
       exchange: exchange
       recommendation: recommendationKey
-
-  - name: iexcloud
-    interval: 60
-    plugin: iexcloud
-    api_key: pk_10a8739d7ce0464aa92880ee313df956
-    metrics:
-      current_price:
-        item: latestPrice
-        type: Gauge
-        help: Current Market Price of Asset
-      change:
-        item: changePercent
-        type: Gauge
-        help: P/C Since Open
-      previous_close:
-        item: previousClose
-        type: Gauge
-        help: Previous Closing Price
-      volume:
-        item: iexVolume
-        type: Gauge
-        help: Current Market Volume
-      previous_volume:
-        item: previousVolume
-        type: Gauge
-        help: Previous Volume
-      avg_volume:
-        item: avgTotalVolume
-        type: Gauge
-        help: Average Volume
-      pe_ratio:
-        item: peRatio
-        type: Gauge
-        help: Price-to-Earnings Ratio
