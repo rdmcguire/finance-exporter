@@ -3,6 +3,7 @@ services:
   finance-exporter:
     build: .
     container_name: finance-exporter
+    restart: on-failure
     ports:
       - 8000:8000
     volumes:

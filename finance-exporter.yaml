@@ -5,11 +5,16 @@ interval: 300
 metric_prefix: finance
 
 tickers:
-  - VIRS
   - FZROX
-  - MRNA
-  - JWN
-  - ABT
+  - IBM
+  - AMD
+  - INTC
+  - BAC
+  - F
+  - MU
+  - ^IXIC
+  - ^SPX
+  - ^DJI
 
 metrics:
   current_price:
@@ -40,10 +45,38 @@ metrics:
     item: fiftyTwoWeekLow
     type: Gauge
     help: Fifty-Two Week Low
+  target_median_price:
+    item: targetMedianPrice
+    type: Gauge
+    help: Target Price (Median)
   volume:
     item: regularMarketVolume
     type: Gauge
     help: Current Market Volume
+  avg_volume:
+    item: averageVolume
+    type: Gauge
+    help: Average Volume
+  avg_10day_volume:
+    item: averageDailyVolume10Day
+    type: Gauge
+    help: Average Daily Volume (10 Day)
+  held_insiders_percent:
+    item: heldPercentInsiders
+    type: Gauge
+    help: Percent of Shared Held by Insiders
+  pe_forward:
+    item: forwardPE
+    type: Gauge
+    help: Forward Price-to-Earnings Ratio
+  pe_trailing:
+    item: trailingPE
+    type: Gauge
+    help: Trailing Price-to-Earnings Ratio
+  shorts:
+    item: sharesShort
+    type: Gauge
+    help: Number of shares short
   beta:
     item: beta
     type: Gauge
@@ -54,3 +87,4 @@ labels:
   type: quoteType
   name: shortName
   exchange: exchange
+  recommendation: recommendationKey

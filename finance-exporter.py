@@ -12,7 +12,7 @@ class finance:
         # Prepare the config
         self.config = dict()
         self.load_config(args.config)
-        # Set up
+        # Set up -- prefer command line arg to yaml arg
         self.verbose            = args.verbose
         self.config['port']     = next(v for v in [ args.port, self.config.get('port') ] if v is not None)
         self.config['address']  = next(v for v in [ args.address, self.config.get('address') ] if v is not None)
@@ -87,9 +87,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Google Finance Prometheus Exporter')
     parser.add_argument('-f', '--config', help='Location of config yaml', required=True)
     parser.add_argument('-v', '--verbose', action='store_true', help='Print status to stdout')
-    parser.add_argument('-p', '--port', help='Listening port (ip:port or just port)', default=8000)
-    parser.add_argument('-a', '--address', help='Listen address (Default 127.0.0.1)', default='127.0.0.1')
-    parser.add_argument('-i', '--interval', help='Collection Interval', default=300)
+    parser.add_argument('-p', '--port', help='Listening port (ip:port or just port)')
+    parser.add_argument('-a', '--address', help='Listen address')
+    parser.add_argument('-i', '--interval', help='Collection Interval')
     args = parser.parse_args()
 
     # Start up
