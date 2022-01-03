@@ -1,21 +1,18 @@
 ---
-port: 8001
+port: 8000
 address: 0.0.0.0
 metric_prefix: finance
 min_interval: 15
 
 tickers:
-  - F
-  - INTC
-  - BAC
-  - MU
-  - CDAK
+  - AAPL
+  - GOOG
 
 sources:
   - name: iexcloud
     interval: 60
     plugin: iexcloud
-    api_key: pk_10a8739d7ce0464aa92880ee313df956
+    api_key: demo
     metrics:
       current_price:
         item: latestPrice
