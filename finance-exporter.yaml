@@ -15,17 +15,17 @@ sources:
     api_key: demo
     metrics:
       current_price:
-        item: latestPrice
+        item: iexRealtimePrice
         type: Gauge
         help: Current Market Price of Asset
       change:
         item: changePercent
         type: Gauge
         help: P/C Since Open
-      previous_close:
-        item: previousClose
+      change_ytd:
+        item: ytdChange
         type: Gauge
-        help: Previous Closing Price
+        help: P/C Year-to-Date
       volume:
         item: iexVolume
         type: Gauge
@@ -47,10 +47,10 @@ sources:
     interval: 300
     plugin: yfinance
     metrics:
-      current_price:
-        item: regularMarketPrice
-        type: Gauge
-        help: Current Market Price of Asset
+      #current_price:
+      #  item: regularMarketPrice
+      #  type: Gauge
+      #  help: Current Market Price of Asset
       open_price:
         item: regularMarketOpen
         type: Gauge
@@ -79,14 +79,14 @@ sources:
         item: targetMedianPrice
         type: Gauge
         help: Target Price (Median)
-      volume:
-        item: regularMarketVolume
-        type: Gauge
-        help: Current Market Volume
-      avg_volume:
-        item: averageVolume
-        type: Gauge
-        help: Average Volume
+        #volume:
+        #  item: regularMarketVolume
+        #  type: Gauge
+        #  help: Current Market Volume
+        #avg_volume:
+        #  item: averageVolume
+        #  type: Gauge
+        #  help: Average Volume
       avg_10day_volume:
         item: averageDailyVolume10Day
         type: Gauge
@@ -117,3 +117,4 @@ sources:
       name: shortName
       exchange: exchange
       recommendation: recommendationKey
+      sector: sector
