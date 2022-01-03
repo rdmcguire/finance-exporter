@@ -7,7 +7,7 @@ import yaml
 import yfinance as yf
 from prometheus_client import start_http_server, Counter, Gauge, Summary, Histogram
 from includes.alphavantage import AlphaVantage
-from iexfinance.stocks import Stock
+import iexfinance.stocks as iex
 # Debug
 from pprint import pprint
 
@@ -16,98 +16,154 @@ class finance:
     def __init__(self, args):
         # Prepare the config
         self.config = dict()
+        # This is hard-coded, see finance.update() quote_info declaration
+        self.default_labels = ['plugin', 'source', 'ticker']
         self.load_config(args.config)
         # Set up -- prefer command line arg to yaml arg
         self.verbose            = args.verbose
         self.debug              = args.debug
         self.config['port']     = next(v for v in [ args.port, self.config.get('port') ] if v is not None)
         self.config['address']  = next(v for v in [ args.address, self.config.get('address') ] if v is not None)
-        self.config['interval'] = next(v for v in [ args.interval, self.config.get('interval') ] if v is not None)
-        self.labels             = list(self.config['labels'].keys())
-        self.metrics            = list(self.config['metrics'].keys())
-        # Setup plugin. Default plugin is yfinance
-        self.plugin             = next(v for v in [ self.config.get('plugin'), 'yfinance' ] if v is not None)
-        if self.plugin == 'alphavantage' and self.config.get('api_key') is None:
-            self.print_log('Must provide API Key for AlphaVantage to use plugin')
-            sys.exit(1)
-        elif self.plugin == 'iexcloud' and self.config.get('api_key') is None:
-            self.print_log('Must provide API Key for IEXCloud to use plugin')
-            sys.exit(1)
-        elif self.plugin == 'alphavantage':
-            self.av = AlphaVantage(self.config.get('api_key'))
+        # Ensure we have sources
+        if self.config.get('sources') is None:
+            raise Exception('Refusing to initialize with no defined sources')
+        # Setup plugins
+        self.sources            = self.load_sources()
+        # Prep unique list of labels and metrics
+        self.labels             = self.load_labels()
+        self.metrics            = self.load_metrics()
         # Prometheus Metrics
         self.prom_metrics               = dict()
-        self.prom_metrics['updates']    = Counter(f"{self.config['metric_prefix']}_updates", 'Number of ticker updates', self.labels)
-        self.prom_metrics['quote_time'] = Gauge(f"{self.config['metric_prefix']}_quote_time", 'Time spent retrieving quote', self.labels)
-        # Prepare metrics
-        for metric in self.metrics:
-            if self.config['metrics'][metric]['type'] == 'Counter':
-                self.prom_metrics[metric] = Counter(f"{self.config['metric_prefix']}_{metric}", self.config['metrics'][metric]['help'], self.labels)
-            elif self.config['metrics'][metric]['type'] == 'Gauge':
-                self.prom_metrics[metric] = Gauge(f"{self.config['metric_prefix']}_{metric}", self.config['metrics'][metric]['help'], self.labels)
-            elif self.config['metrics'][metric]['type'] == 'Histogram':
-                self.prom_metrics[metric] = Histogram(f"{self.config['metric_prefix']}_{metric}", self.config['metrics'][metric]['help'], self.labels)
-            elif self.config['metrics'][metric]['type'] == 'Summary':
-                self.prom_metrics[metric] = Summary(f"{self.config['metric_prefix']}_{metric}", self.config['metrics'][metric]['help'], self.labels)
+        if self.verbose:
+            self.print_log('Preparing default metrics with labels:')
+            pprint(self.default_labels)
+        self.prom_metrics['updates']    = Counter(f"{self.config['metric_prefix']}_updates", 'Number of ticker updates', self.default_labels)
+        self.prom_metrics['quote_time'] = Gauge(f"{self.config['metric_prefix']}_quote_time", 'Time spent retrieving quote', self.default_labels)
+        # Initialized Configured Metrics
+        self.init_metrics()
 
     def load_config(self, config_file):
         with open(config_file, 'r') as config_file:
             self.config = yaml.load(config_file, Loader=yaml.FullLoader)
 
     def print_config(self):
-        self.print_log(self.config)
+        self.print_log(pprint(self.config))
+
+    def load_sources(self):
+        sources = dict()
+        for source in self.config['sources']:
+            sources[source['name']] = source
+            if source['plugin'] == 'alphavantage':
+                if source.get('api_key') is None:
+                    raise Exception(f"Source {source['name']} must provide API Key for AlphaVantage to use plugin")
+                sources[source['name']]['handler'] = AlphaVantage(source['api_key'])
+            elif source['plugin'] == 'iexcloud':
+                if source.get('api_key') is None:
+                    raise Exception(f"Source {source['name']} must provide API Key for IEXCloud to use plugin")
+                sources[source['name']]['handler'] = iex
+            elif source['plugin'] == 'yfinance':
+                sources[source['name']]['handler'] = yf
+        return sources
+
+    def load_labels(self):
+        labels = dict()
+        for source in self.config['sources']:
+            if source.get('labels') is None:
+                labels[source['name']] = self.default_labels.copy()
+            else:
+                labels[source['name']] = list(set(self.default_labels + list(source['labels'].keys())))
+        return labels
+
+    def load_metrics(self):
+        metrics = dict()
+        for source in self.config['sources']:
+            # Define source for metric in-case of overlap
+            for metric in source['metrics'].keys():
+                source['metrics'][metric].update({ 'source': source['name'] })
+            metrics.update(source['metrics'])
+        return metrics
+
+    def init_metrics(self):
+        for name, metric in self.metrics.items():
+            metric_labels = self.labels[metric['source']]
+            if self.verbose:
+                self.print_log(f"Preparing metric {name}({metric['type']}) from {metric['source']} with labels:")
+                pprint(metric_labels)
+            if metric['type'] == 'Counter':
+                self.prom_metrics[name] = Counter(f"{self.config['metric_prefix']}_{name}", metric['help'], metric_labels)
+            elif metric['type'] == 'Gauge':
+                self.prom_metrics[name] = Gauge(f"{self.config['metric_prefix']}_{name}", metric['help'], metric_labels)
+            elif metric['type'] == 'Histogram':
+                self.prom_metrics[name] = Histogram(f"{self.config['metric_prefix']}_{name}", metric['help'], metric_labels)
+            elif metric['type'] == 'Summary':
+                self.prom_metrics[name] = Summary(f"{self.config['metric_prefix']}_{name}", metric['help'], metric_labels)
 
     def start_server(self):
         if self.verbose:
             self.print_log(f"Starting HTTP Server on {self.config['address']}:{self.config['port']}")
         start_http_server(int(self.config['port']), addr=self.config['address'])
 
-    def fetch_data(self, ticker):
-        if self.plugin == 'yfinance':
-            return yf.Ticker(ticker).info
-        elif self.plugin == 'alphavantage':
-            self.av.ticker(ticker)
-            return self.av.get_all()
-        elif self.plugin == 'iexcloud':
-            stock = Stock(ticker, output_format='json', token=self.config.get('api_key'))
-            quote = stock.get_quote()
-            return quote
+    def fetch_data(self, source, ticker):
+        handler = source['handler']
+        if source['plugin'] == 'yfinance':
+            return handler.Ticker(ticker).info
+        elif source['plugin'] == 'alphavantage':
+            handler.ticker(ticker)
+            return handler.get_all()
+        elif source['plugin'] == 'iexcloud':
+            stock = handler.Stock(ticker, output_format='json',token = source['api_key']).get_quote()
+            return stock
 
-    def update(self):
+    def update(self, source):
         for ticker in self.config['tickers']:
             if self.verbose:
-                self.print_log(f'Updating ticker {ticker}')
+                self.print_log(f"Updating ticker {ticker} from {source['name']}")
             start_time = time.time()
+            quote = dict()
             try:
-                quote = self.fetch_data(ticker)
+                quote = self.fetch_data(source, ticker)
                 if self.debug:
                     pprint(quote)
             except Exception as e:
                 print(f'Error fetching {ticker}: {e}')
                 continue
             duration = time.time() - start_time
-            quote_info = dict()
+            default_labels = {
+                'source': source['name'],
+                'plugin': source['plugin'],
+                'ticker': ticker,
+            }
             # Update label values
-            for label in self.labels:
-                quote_info[label] = quote.get(self.config['labels'][label])
+            quote_info = default_labels.copy()
+            if source.get('labels') is not None:
+                for label, field in source['labels'].items():
+                    quote_info[label] = quote.get(field)
             # Update Manual Metrics
-            self.prom_metrics['updates'].labels(**quote_info).inc()
-            self.prom_metrics['quote_time'].labels(**quote_info).set(duration)
+            if self.debug:
+                self.print_log('Preparing to load manual metrics with labels:')
+                pprint(default_labels)
+            self.prom_metrics['updates'].labels(default_labels).inc()
+            self.prom_metrics['quote_time'].labels(default_labels).set(duration)
+            if self.debug:
+                self.print_log('Preparing to load configured metrics with labels:')
+                pprint(quote_info)
             # Update Configured Metrics
-            for metric in self.metrics:
-                value = quote.get(self.config['metrics'][metric]['item'])
+            for name, metric in self.metrics.items():
+                if metric['source'] != source['name']:
+                    continue
+                value = quote.get(metric['item'])
                 if value is None:
                     continue
-                if self.config['metrics'][metric]['type'] == 'Counter':
-                    self.prom_metrics[metric].labels(**quote_info).inc()
-                elif self.config['metrics'][metric]['type'] == 'Gauge':
-                    self.prom_metrics[metric].labels(**quote_info).set(value)
-                elif self.config['metrics'][metric]['type'] == 'Histogram':
-                    self.prom_metrics[metric].labels(**quote_info).observe(value)
-                elif self.config['metrics'][metric]['type'] == 'Summary':
-                    self.prom_metrics[metric].labels(**quote_info).observe(value)
+                if metric['type'] == 'Counter':
+                    self.prom_metrics[name].labels(**quote_info).inc()
+                elif metric['type'] == 'Gauge':
+                    self.prom_metrics[name].labels(**quote_info).set(value)
+                elif metric['type'] == 'Histogram':
+                    self.prom_metrics[name].labels(**quote_info).observe(value)
+                elif metric['type'] == 'Summary':
+                    self.prom_metrics[name].labels(**quote_info).observe(value)
             if self.verbose:
-                self.print_log(f' - Updated {ticker} in {duration}s')
+                self.print_log(f" - Updated {ticker} from {source['name']} in {duration}s")
 
     def print_log(self, msg):
         print(f'{datetime.now()} {msg}', flush=True)
@@ -118,17 +174,27 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='Print status to stdout')
     parser.add_argument('-p', '--port', help='Listening port (ip:port or just port)')
     parser.add_argument('-a', '--address', help='Listen address')
-    parser.add_argument('-i', '--interval', help='Collection Interval')
     parser.add_argument('-d', '--debug', action="store_true",help="Dump API Data")
     args = parser.parse_args()
 
     # Start up
     f = finance(args)
-    if args.verbose:
+    if args.debug:
         f.print_log(f'Running with config: ')
         f.print_config()
     f.start_server()
 
+    # Track Updates
+    last_run = dict()
+    for name, source in f.sources.items():
+        last_run[name] = 0
+
+    # Update in loop
     while True:
-        f.update()
-        time.sleep(f.config['interval'])
+        for name, source in f.sources.items():
+            if time.time() - last_run[name] > source['interval']:
+                if args.verbose:
+                    f.print_log(f"Updating Source {name}")
+                f.update(source)
+                last_run[name] = time.time()
+        time.sleep(f.config['min_interval'])
