@@ -2,7 +2,6 @@
 import argparse
 import time
 from datetime import datetime
-import sys
 import yaml
 import yfinance as yf
 from prometheus_client import start_http_server, Counter, Gauge, Summary, Histogram
