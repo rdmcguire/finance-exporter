@@ -7,7 +7,7 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - ./finance-exporter.yaml:/usr/src/app/finance-exporter.yaml
+      - ./config.yaml:/usr/src/app/finance-exporter.yaml
     environment:
       - CONFIG=/usr/src/app/finance-exporter.yaml
       - OPTS=-v
