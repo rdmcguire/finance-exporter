@@ -7,6 +7,7 @@ import yaml
 import yfinance as yf
 from prometheus_client import start_http_server, Counter, Gauge, Summary, Histogram
 from includes.alphavantage import AlphaVantage
+from iexfinance.stocks import Stock
 
 class finance:
 
@@ -16,6 +17,7 @@ class finance:
         self.load_config(args.config)
         # Set up -- prefer command line arg to yaml arg
         self.verbose            = args.verbose
+        self.debug              = args.debug
         self.config['port']     = next(v for v in [ args.port, self.config.get('port') ] if v is not None)
         self.config['address']  = next(v for v in [ args.address, self.config.get('address') ] if v is not None)
         self.config['interval'] = next(v for v in [ args.interval, self.config.get('interval') ] if v is not None)
@@ -25,6 +27,9 @@ class finance:
         self.plugin             = next(v for v in [ self.config.get('plugin'), 'yfinance' ] if v is not None)
         if self.plugin == 'alphavantage' and self.config.get('api_key') is None:
             self.print_log('Must provide API Key for AlphaVantage to use plugin')
+            sys.exit(1)
+        elif self.plugin == 'iexcloud' and self.config.get('api_key') is None:
+            self.print_log('Must provide API Key for IEXCloud to use plugin')
             sys.exit(1)
         elif self.plugin == 'alphavantage':
             self.av = AlphaVantage(self.config.get('api_key'))
@@ -61,6 +66,9 @@ class finance:
         elif self.plugin == 'alphavantage':
             self.av.ticker(ticker)
             return self.av.get_all()
+        elif self.plugin == 'iexcloud':
+            quote = Stock(ticker, output_format='json', token=self.config.get('api_key')).get_quote()
+            return quote
 
     def update(self):
         for ticker in self.config['tickers']:
@@ -69,6 +77,8 @@ class finance:
             start_time = time.time()
             try:
                 quote = self.fetch_data(ticker)
+                if self.debug:
+                    print(quote)
             except Exception as e:
                 print(f'Error fetching {ticker}: {e}')
                 continue
@@ -106,6 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', help='Listening port (ip:port or just port)')
     parser.add_argument('-a', '--address', help='Listen address')
     parser.add_argument('-i', '--interval', help='Collection Interval')
+    parser.add_argument('-d', '--debug', action="store_true",help="Dump API Data")
     args = parser.parse_args()
 
     # Start up
