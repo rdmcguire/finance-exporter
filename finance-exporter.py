@@ -31,11 +31,12 @@ class finance:
         # Prep unique list of labels and metrics
         self.labels             = self.load_labels()
         self.metrics            = self.load_metrics()
-        # Prepare label cache
+        # Prepare label cache and pre-populate before first run
         self.label_cache        = dict()
         for ticker in self.config['tickers']:
             self.label_cache[ticker] = { label: None for label in self.labels }
-        # Prometheus Metrics
+            self.init_cache(ticker)
+        # Prepare Prometheus Metrics
         self.prom_metrics               = dict()
         if self.verbose:
             self.print_log(f'Preparing default metrics with labels: {self.labels}')
@@ -83,6 +84,13 @@ class finance:
             metrics.update(source['metrics'])
         return metrics
 
+    def init_cache(self, ticker):
+        for source in self.config['sources']:
+            if self.verbose:
+                self.print_log(f"Prep cache for {source['name']} -> {ticker}")
+            quote = self.fetch_data(source, ticker)
+            self.quote_labels(source, ticker, quote)
+
     def init_metrics(self):
         for name, metric in self.metrics.items():
             if self.verbose:
@@ -112,6 +120,22 @@ class finance:
             stock = handler.Stock(ticker, output_format='json',token = source['api_key']).get_quote()
             return stock
 
+    # Prepare labels using standard labels, label cache, and quote labels
+    def quote_labels(self, source, ticker, quote):
+        # Update label values from Quote
+        quote_info = dict({
+            'source': source['name'],
+            'plugin': source['plugin'],
+            'ticker': ticker,
+        })
+        if source.get('labels') is not None:
+            quote_info.update({ label: quote.get(field) for label, field in source.get('labels').items() if quote.get(field) is not None })
+        # Update Cache
+        self.label_cache[ticker].update(quote_info)
+        # Fill in the blanks
+        quote_info.update({ label: self.label_cache[ticker][label] for label in self.labels if quote_info.get(label) is None })
+        return quote_info
+
     def update(self, source):
         for ticker in self.config['tickers']:
             if self.verbose:
@@ -126,18 +150,8 @@ class finance:
                 print(f'Error fetching {ticker}: {e}')
                 continue
             duration = time.time() - start_time
-            # Update label values from Quote
-            quote_info = dict({
-                'source': source['name'],
-                'plugin': source['plugin'],
-                'ticker': ticker,
-            })
-            if source.get('labels') is not None:
-                quote_info.update({ label: quote.get(field) for label, field in source.get('labels').items() if quote.get(field) is not None })
-            # Update Cache
-            self.label_cache[ticker].update(quote_info)
-            # Fill in the blanks
-            quote_info.update({ label: self.label_cache[ticker][label] for label in self.labels if quote_info.get(label) is None })
+            # Handle labels
+            quote_info = self.quote_labels(source, ticker, quote)
             # Update Metrics
             if self.debug:
                 self.print_log(f'Preparing to load metrics with labels: {quote_info}')
