@@ -2,3 +2,4 @@ pyyaml
 yfinance
 prometheus_client
 iexfinance
+jsonschema
