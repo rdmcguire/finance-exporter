@@ -10,6 +10,10 @@ Currently, three APIs are supported:
 
 For IEXCloud and AlphaVantage, an API key must be specified in api_key for the source.
 
+## Grafana Dashboard Sample
+Grafana Dashboard json in [Grafana JSON](contrib/finance-exporter.json)
+![Grafana Dashboard](contrib/grafana.png)
+
 ## Configuration
 Configuration is well defined in schema.yaml. The primary sections are:
 1. Global parameters
