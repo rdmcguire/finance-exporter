@@ -3,6 +3,11 @@ port: 8000
 address: 0.0.0.0
 metric_prefix: finance
 min_interval: 15
+# If set, each ticker will load labels from each source
+# before the first run. Slows down startup time but
+# necessary if using multiple sources that do not
+# provide all labels
+update_cache_on_startup: false
 
 tickers:
   - AAPL

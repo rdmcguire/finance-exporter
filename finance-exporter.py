@@ -13,37 +13,40 @@ from pprint import pprint
 class finance:
 
     def __init__(self, args):
-        # Prepare the config
+        self.print_log("Starting up...")
+    # Prepare the config
         self.config = dict()
-        # This is hard-coded, see finance.update() quote_info declaration
+    # This is hard-coded, see finance.update() quote_info declaration
         self.default_labels     = list(['plugin', 'source', 'ticker'])
         self.load_config(args.config)
-        # Set up -- prefer command line arg to yaml arg
+    # Set up -- prefer command line arg to yaml arg
         self.verbose            = args.verbose
         self.debug              = args.debug
         self.config['port']     = next(v for v in [ args.port, self.config.get('port') ] if v is not None)
         self.config['address']  = next(v for v in [ args.address, self.config.get('address') ] if v is not None)
-        # Ensure we have sources
+    # Ensure we have sources
         if self.config.get('sources') is None:
             raise Exception('Refusing to initialize with no defined sources')
-        # Setup plugins
+    # Setup plugins
         self.sources            = self.load_sources()
-        # Prep unique list of labels and metrics
+    # Prep unique list of labels and metrics
         self.labels             = self.load_labels()
         self.metrics            = self.load_metrics()
-        # Prepare label cache and pre-populate before first run
+    # Prepare label cache and pre-populate before first run
         self.label_cache        = dict()
-        for ticker in self.config['tickers']:
-            self.label_cache[ticker] = { label: None for label in self.labels }
-            self.init_cache(ticker)
-        # Prepare Prometheus Metrics
+        if self.config['update_cache_on_startup']:
+            for ticker in self.config['tickers']:
+                self.label_cache[ticker] = { label: None for label in self.labels }
+                self.init_cache(ticker)
+    # Prepare Prometheus Metrics
         self.prom_metrics               = dict()
         if self.verbose:
             self.print_log(f'Preparing default metrics with labels: {self.labels}')
         self.prom_metrics['updates']    = Counter(f"{self.config['metric_prefix']}_updates", 'Number of ticker updates', self.labels)
         self.prom_metrics['quote_time'] = Gauge(f"{self.config['metric_prefix']}_quote_time", 'Time spent retrieving quote', self.labels)
-        # Initialized Configured Metrics
+    # Initialized Configured Metrics
         self.init_metrics()
+        self.print_log("Ready to Run...")
 
     def load_config(self, config_file):
         with open(config_file, 'r') as config_file:
@@ -111,18 +114,25 @@ class finance:
 
     def fetch_data(self, source, ticker):
         handler = source['handler']
-        if source['plugin'] == 'yfinance':
-            return handler.Ticker(ticker).info
-        elif source['plugin'] == 'alphavantage':
-            handler.ticker(ticker)
-            return handler.get_all()
-        elif source['plugin'] == 'iexcloud':
-            stock = handler.Stock(ticker, output_format='json',token = source['api_key']).get_quote()
-            return stock
+        result = None
+        try:
+            if source['plugin'] == 'yfinance':
+                result = handler.Ticker(ticker).info
+            elif source['plugin'] == 'alphavantage':
+                handler.ticker(ticker)
+                result = handler.get_all()
+            elif source['plugin'] == 'iexcloud':
+                stock = handler.Stock(ticker, output_format='json',token = source['api_key']).get_quote()
+                result = stock
+        except Exception as e:
+            self.print_log(f"Unable to fetch {ticker} from {source['name']}")
+            if self.verbose:
+                self.print_log(e)
+        return result
 
-    # Prepare labels using standard labels, label cache, and quote labels
+# Prepare labels using standard labels, label cache, and quote labels
     def quote_labels(self, source, ticker, quote):
-        # Update label values from Quote
+    # Update label values from Quote
         quote_info = dict({
             'source': source['name'],
             'plugin': source['plugin'],
@@ -130,9 +140,9 @@ class finance:
         })
         if source.get('labels') is not None:
             quote_info.update({ label: quote.get(field) for label, field in source.get('labels').items() if quote.get(field) is not None })
-        # Update Cache
+    # Update Cache
         self.label_cache[ticker].update(quote_info)
-        # Fill in the blanks
+    # Fill in the blanks
         quote_info.update({ label: self.label_cache[ticker][label] for label in self.labels if quote_info.get(label) is None })
         return quote_info
 
@@ -144,20 +154,22 @@ class finance:
             quote = dict()
             try:
                 quote = self.fetch_data(source, ticker)
+                if quote is None:
+                    continue
                 if self.debug:
                     pprint(quote)
             except Exception as e:
                 print(f'Error fetching {ticker}: {e}')
                 continue
             duration = time.time() - start_time
-            # Handle labels
+        # Handle labels
             quote_info = self.quote_labels(source, ticker, quote)
-            # Update Metrics
+        # Update Metrics
             if self.debug:
                 self.print_log(f'Preparing to load metrics with labels: {quote_info}')
             self.prom_metrics['updates'].labels(**quote_info).inc()
             self.prom_metrics['quote_time'].labels(**quote_info).set(duration)
-            # Update Configured Metrics
+        # Update Configured Metrics
             for name, metric in self.metrics.items():
                 if metric['source'] != source['name']:
                     continue
@@ -187,19 +199,19 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', action="store_true",help="Dump API Data")
     args = parser.parse_args()
 
-    # Start up
+# Start up
     f = finance(args)
     if args.debug:
         f.print_log(f'Running with config: ')
         f.print_config()
     f.start_server()
 
-    # Track Updates
+# Track Updates
     last_run = dict()
     for name, source in f.sources.items():
         last_run[name] = 0
 
-    # Update in loop
+# Update in loop
     while True:
         for name, source in f.sources.items():
             if time.time() - last_run[name] > source['interval']:
