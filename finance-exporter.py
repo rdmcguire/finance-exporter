@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 import argparse
 import time
+import os
 from datetime import datetime
 import yaml
+import jsonschema
 import yfinance as yf
 from prometheus_client import start_http_server, Counter, Gauge, Summary, Histogram
 from includes.alphavantage import AlphaVantage
@@ -15,6 +17,7 @@ class finance:
     def __init__(self, args):
         self.print_log("Starting up...")
     # Prepare the config
+        self.schema_path = f"{os.path.dirname(__file__)}/schema.yaml"
         self.config = dict()
     # This is hard-coded, see finance.update() quote_info declaration
         self.default_labels     = list(['plugin', 'source', 'ticker'])
@@ -34,9 +37,9 @@ class finance:
         self.metrics            = self.load_metrics()
     # Prepare label cache and pre-populate before first run
         self.label_cache        = dict()
-        if self.config['update_cache_on_startup']:
-            for ticker in self.config['tickers']:
-                self.label_cache[ticker] = { label: None for label in self.labels }
+        for ticker in self.config['tickers']:
+            self.label_cache[ticker] = { label: None for label in self.labels }
+            if self.config['update_cache_on_startup']:
                 self.init_cache(ticker)
     # Prepare Prometheus Metrics
         self.prom_metrics               = dict()
@@ -51,6 +54,14 @@ class finance:
     def load_config(self, config_file):
         with open(config_file, 'r') as config_file:
             self.config = yaml.load(config_file, Loader=yaml.FullLoader)
+        with open(self.schema_path) as fd:
+            schema = yaml.safe_load(fd)
+        self.print_log("Validating Config...")
+        try:
+            jsonschema.validate(self.config, schema)
+        except jsonschema.ValidationError as e:
+            path = "/".join(str(item) for item in e.absolute_path)
+            raise Exception(f"Invalid config at {path}: {e.message}")
 
     def print_config(self):
         self.print_log(pprint(self.config))

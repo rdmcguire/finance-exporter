@@ -1,0 +1,122 @@
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://github.com/redbeardmcg/finance-exporter/schema.yaml
+title: finance-exporter config file schema
+type: object
+additionalProperties: false
+
+required:
+  - address
+  - port
+  - tickers
+  - sources
+
+properties:
+  min_interval:
+    title: Minimum Update Interval
+    description: Minimum time between updates (in seconds).
+    type: integer
+    minimum: 1
+  port:
+    title: Listen Port
+    description: Default port to listen on
+    type: integer
+  address:
+    title: Listen Address
+    description: Default IP tp listen on. 0.0.0.0 for all
+    type: string
+    format: ip-address
+  metric_prefix:
+    title: Metric Prefix
+    description: String to prepend to all metric names
+    anyOf:
+      - type: string
+      - type: "null"
+  update_cache_on_startup:
+    title: Update cache on startup
+    description: Whether or not to load label values from each source for each ticket before the first metric run. Always use for multi-source configurations where some sources lack labels of others to reduce split time series. Boolean.
+    type: boolean
+
+  tickers:
+    type: array
+    items:
+      type: string
+    minItems: 1
+    uniqueItems: true
+
+  sources:
+    title: List of data sources
+    type: array
+    items:
+      $ref: "#/definitions/source"
+    minItems: 1
+    uniqueItems: true
+
+definitions:
+
+  source:
+    type: object
+    required:
+      - name
+      - interval
+      - metrics
+    properties:
+      name:
+        title: Name of data source
+        type: string
+      interval:
+        title: Collection interval
+        description: How long to wait between updates
+        type: integer
+      plugin:
+        title: Data API Plugin
+        description: Name of plugin to retrieve data
+        type: string
+        enum:
+          - yfinance
+          - iexcloud
+          - AlphaVantage
+      api_key:
+        title: API Key for plugin
+        description: API Key, required for iexcloud and AlphaVantage
+        type: string
+      metrics:
+        title: Definitions of metrics to retrieve from source
+        type: object
+        patternProperties:
+          ^\w+$:
+            $ref: "#/definitions/metric"
+      labels:
+        title: Labels to retrieve from source
+        description: Name / Value pairs of labels where Value is the field to use from the API response to populate the label
+        type: object
+        patternProperties:
+          ^\w+$:
+            type: string
+
+  metric:
+    title: Metric configuration
+    description: Detail for metric to retrieve from source
+    type: object
+    additionalProperties: false
+    required:
+      - item
+      - type
+      - help
+    properties:
+      item:
+        title: API Item
+        description: Name of field from API response (e.g. pe_ratio)
+        type: string
+      type:
+        title: API Item
+        description: Name of field from API response (e.g. pe_ratio)
+        type: string
+        enum:
+          - Gauge
+          - Counter
+          - Summary
+          - Histogram
+          - Text
+      help:
+        title: Help text
+        type: string
