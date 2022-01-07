@@ -4,17 +4,17 @@ This exporter allows you to define metrics and labels to be collected
 and served on a prometheus metrics endpoint.
 
 Currently, three APIs are supported:
-  * Yahoo Finance
-	* IEXCloud
-	* AlphaVantage
+* Yahoo Finance
+* IEXCloud
+* AlphaVantage
 
 For IEXCloud and AlphaVantage, an API key must be specified in api_key for the source.
 
 ## Configuration
 Configuration is well defined in schema.yaml. The primary sections are:
-  1. Global parameters
-	1. Tickers
-	1. Sources
+1. Global parameters
+1. Tickers
+1. Sources
 
 For each source, metrics and labels are defined. If using multiple sources,
 the metrics will be build with the full combination of labels. This is to allow
@@ -27,19 +27,21 @@ If you have more than one source and the full set of labels are not collected
 from both, be certain to set `update_cache_on_startup: true`
 
 **Global Settings**
-```yaml`
+```yaml
 port: 8000
 address: 0.0.0.0
 metric_prefix: finance
 min_interval: 15
 update_cache_on_startup: false
 ```
+
 **Tickers**
 ```yaml
 tickers:
   - AAPL
   - GOOG
-	```
+```
+
 **Sources**
 ```yaml
 sources:
@@ -48,6 +50,7 @@ sources:
     plugin: yfinance
     metrics:
 ```
+
 **Metrics**
 ```yaml
       open_price:
@@ -59,6 +62,7 @@ sources:
         type: Gauge
         help: Previous Closing Price
 ```
+
 **Labels**
 ```yaml
     labels:
@@ -68,7 +72,7 @@ sources:
       exchange: exchange
       recommendation: recommendationKey
       sector: sector
-			```
+```
 
 ## Running the exporter
 If you want to run as-is, simply install modules in requirements.txt
@@ -89,7 +93,8 @@ optional arguments:
   -a ADDRESS, --address ADDRESS
                         Listen address
   -d, --debug           Dump API Data
-  ```
+```
+
 ### Running in Docker
 A docker-compose is provided showing the location of the config volume as well as env vars.
 
