@@ -1,5 +1,5 @@
 $schema: http://json-schema.org/draft-07/schema#
-$id: https://github.com/redbeardmcg/finance-exporter/schema.yaml
+$id: https://github.com/rdmcguire/finance-exporter/schema.yaml
 title: finance-exporter config file schema
 type: object
 additionalProperties: false
