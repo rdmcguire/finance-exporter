@@ -47,6 +47,14 @@ class finance:
             self.print_log(f'Preparing default metrics with labels: {self.labels}')
         self.prom_metrics['updates']    = Counter(f"{self.config['metric_prefix']}_updates", 'Number of ticker updates', self.labels)
         self.prom_metrics['quote_time'] = Gauge(f"{self.config['metric_prefix']}_quote_time", 'Time spent retrieving quote', self.labels)
+    # Response time histogram should not include ticker
+        histogram_labels = self.default_labels.copy()
+        histogram_labels.remove('ticker')
+        self.print_log(f"Launching histogram with labels {histogram_labels}")
+        self.prom_metrics['quote_histogram'] = Histogram(f"{self.config['metric_prefix']}_quote_histogram",
+                                                         'Histogram of quote retrieval times',
+                                                         histogram_labels,
+                                                         buckets = list(range(1,21)))
     # Initialized Configured Metrics
         self.init_metrics()
         self.print_log("Ready to Run...")
@@ -180,6 +188,10 @@ class finance:
                 self.print_log(f'Preparing to load metrics with labels: {quote_info}')
             self.prom_metrics['updates'].labels(**quote_info).inc()
             self.prom_metrics['quote_time'].labels(**quote_info).set(duration)
+            self.prom_metrics['quote_histogram'].labels(
+                source = source['name'],
+                plugin = source['plugin']
+            ).observe(duration)
         # Update Configured Metrics
             for name, metric in self.metrics.items():
                 if metric['source'] != source['name']:
